@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pokémon Draft Royale</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0f1724;
+      --panel:#0b1220cc;
+      --accent:#60a5fa;
+      --glass: rgba(255,255,255,0.04);
+    }
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    body{margin:0;min-height:100vh;background:
+      radial-gradient(1200px 600px at 10% 10%, rgba(96,165,250,0.06), transparent 8%),
+      radial-gradient(700px 400px at 90% 90%, rgba(236,72,153,0.05), transparent 8%),
+      var(--bg); color:#e6eef8;}
+    .wrap{max-width:1200px;margin:28px auto;padding:20px;display:grid;grid-template-columns: 360px 1fr;gap:20px;}
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter: blur(6px);padding:18px;border-radius:12px;box-shadow:0 6px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03);}
+    h1{margin:0 0 8px 0;font-size:20px;display:flex;align-items:center;gap:10px}
+    small{opacity:0.7}
+    .controls {display:flex;flex-direction:column;gap:12px}
+    label{font-size:13px;display:flex;flex-direction:column;gap:6px}
+    input[type="number"], input[type="text"], select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    button{cursor:pointer;padding:10px;border-radius:10px;border:none;background:linear-gradient(90deg,var(--accent),#f472b6);color:#041024;font-weight:700;box-shadow:0 6px 20px rgba(96,165,250,0.08);transition:transform .12s ease, box-shadow .12s;display:inline-flex;align-items:center;gap:8px}
+    button:active{transform:translateY(2px)}
+    .players-list{Display:grid;gap:10px;margin-top:6px}
+    .player-row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border:1px solid rgba(255,255,255,0.02)}
+    .player-row .color{width:34px;height:34px;border-radius:8px;flex:0 0 34px}
+    .player-row input[type="text"]{flex:1}
+    .smallmuted{font-size:12px;color:#b8c6d9;opacity:0.9}
+    /* main area */
+    .main{display:flex;flex-direction:column;gap:14px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .pool-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+    .card{background:var(--glass);border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;color:inherit;border:1px solid rgba(255,255,255,0.03);transition:transform .16s ease, box-shadow .16s}
+    .card img{width:88px;height:88px;object-fit:contain;filter: drop-shadow(0 6px 10px rgba(2,6,23,0.6));transition:transform .18s}
+    .card:hover{transform:translateY(-6px) scale(1.02);box-shadow:0 12px 40px rgba(2,6,23,0.6)}
+    .name{font-weight:700;text-transform:capitalize;font-size:13px}
+    .meta{font-size:12px;color:#a7c0e1}
+    .picked{outline:3px solid #84cc16;box-shadow:0 8px 30px rgba(132,204,22,0.07);animation:pop .28s}
+    @keyframes pop{from{transform:scale(.98)}to{transform:scale(1)}}
+    .strike{opacity:.22;text-decoration:line-through;color:#b8c6d9}
+    .turn-panel{display:flex;gap:8px;align-items:center}
+    .turn-bubble{padding:8px 12px;border-radius:999px;background:rgba(255,255,255,0.03);font-weight:700}
+    .current-player{box-shadow:0 12px 30px rgba(96,165,250,0.12);transform:scale(1.02);border:2px solid rgba(96,165,250,0.12)}
+    .picks-row{display:flex;gap:8px;flex-wrap:wrap}
+    .pick-slot{width:70px;height:70px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:6px;border:1px dashed rgba(255,255,255,0.03)}
+    .scoreboard{display:flex;gap:8px;flex-wrap:wrap}
+    .score-card{padding:10px;border-radius:8px;min-width:160px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008));border:1px solid rgba(255,255,255,0.02)}
+    .big{font-size:18px;font-weight:800}
+    .muted{opacity:0.75;font-size:13px}
+    /* small screens */
+    @media (max-width:920px){.wrap{grid-template-columns:1fr;}}
+    /* dopamine blink */
+    .sparkle{position:relative}
+    .sparkle:after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 30px rgba(255,255,255,0.04);opacity:0;transition:opacity .18s}
+    .sparkle.active:after{opacity:1;animation:glow .6s ease-out}
+    @keyframes glow{0%{box-shadow:0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 40px rgba(96,165,250,0.08)}100%{box-shadow:0 0 12px rgba(255,255,255,0.03)}}
+    footer{font-size:12px;color:#9fb7db;margin-top:10px;opacity:0.9}
+    .controls-row{display:flex;gap:8px;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel">
+      <h1>Pokémon Draft Royale <small>— quick local multiplayer</small></h1>
+      <div class="controls">
+        <label>Number of players
+          <input id="numPlayers" type="number" min="2" max="8" value="3"/>
+        </label>
+        <label>Points to win
+          <input id="targetScore" type="number" min="1" max="30" value="9"/>
+        </label>
+        <div class="players-list" id="playersList"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="initBtn">Create Players</button>
+          <button id="startBtn" style="background:linear-gradient(90deg,#34d399,#06b6d4)">Start Game</button>
+        </div>
+        <div style="margin-top:12px" class="smallmuted">
+          Each round: players draft 4 Pokémon from a pool (pool size = players × 4). Then a random 12 Pokémon are rolled — any drafted Pokémon that appear are removed from that player's pool. Full removal = 3 points, 2nd most removed = 1 point. Next round pick order is from lowest → highest score. Good luck!
+        </div>
+      </div>
+      <footer>Data & images from <a href="https://pokeapi.co" target="_blank" style="color:#84cc16">PokeAPI</a>. Confetti & animations included.</footer>
+    </aside>
+
+    <main class="panel main" id="mainArea">
+      <div class="topbar">
+        <div>
+          <div class="turn-panel" id="roundInfo">
+            <div class="turn-bubble">Round: <span id="roundNum">0</span></div>
+            <div class="turn-bubble">Target: <span id="targetDisp">0</span></div>
+            <div id="turnOwner" style="margin-left:12px"></div>
+          </div>
+          <div style="margin-top:8px" class="muted">Draft pool will have <span id="poolSize">0</span> Pokémon this round</div>
+        </div>
+        <div>
+          <div class="scoreboard" id="scoreboard"></div>
+        </div>
+      </div>
+
+      <section>
+        <h3 style="margin:6px 0">Draft pool</h3>
+        <div class="pool-grid" id="poolGrid"></div>
+      </section>
+
+      <section style="margin-top:6px">
+        <h3 style="margin:6px 0">Current player's picks</h3>
+        <div class="picks-row" id="picksRow"></div>
+      </section>
+
+      <section style="margin-top:6px">
+        <h3 style="margin:6px 0">12 Random roll</h3>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <button id="rollBtn">Generate 12 Pokémon</button>
+          <button id="rerollBtn" style="background:linear-gradient(90deg,#f97316,#f43f5e)">Re-roll</button>
+          <button id="resolveBtn" style="background:linear-gradient(90deg,#ef4444,#be123c)">Resolve & Score</button>
+          <div id="rollStatus" class="muted" style="margin-left:10px">No roll yet</div>
+        </div>
+        <div class="pool-grid" id="rollGrid"></div>
+      </section>
+
+      <section style="margin-top:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button id="nextRoundBtn" style="background:linear-gradient(90deg,#7c3aed,#06b6d4)">Next Round</button>
+        <button id="resetGameBtn" style="background:#111827;color:#fff">Reset Game</button>
+      </section>
+
+    </main>
+  </div>
+
+  <canvas id="confettiCanvas" style="position:fixed;inset:0;pointer-events:none;z-index:9999"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+  <script>
+    // Quick single-file Pokémon Draft game
+    // Uses PokeAPI (https://pokeapi.co/) for names & official artwork
+    // Author: generated for you — tweak freely
+
+    const MAX_POKEMON_ID = 1010; // safe upper bound for modern gens; PokeAPI returns 404 if ID > available
+    const playersListEl = document.getElementById('playersList');
+    const numPlayersInput = document.getElementById('numPlayers');
+    const initBtn = document.getElementById('initBtn');
+    const startBtn = document.getElementById('startBtn');
+    const poolGrid = document.getElementById('poolGrid');
+    const picksRow = document.getElementById('picksRow');
+    const roundNumEl = document.getElementById('roundNum');
+    const poolSizeEl = document.getElementById('poolSize');
+    const rollBtn = document.getElementById('rollBtn');
+    const rerollBtn = document.getElementById('rerollBtn');
+    const rollGrid = document.getElementById('rollGrid');
+    const rollStatus = document.getElementById('rollStatus');
+    const resolveBtn = document.getElementById('resolveBtn');
+    const targetDisp = document.getElementById('targetDisp');
+    const scoreboardEl = document.getElementById('scoreboard');
+    const turnOwnerEl = document.getElementById('turnOwner');
+    const nextRoundBtn = document.getElementById('nextRoundBtn');
+    const resetGameBtn = document.getElementById('resetGameBtn');
+
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const confetti = confettiCanvas ? confetti.create(confettiCanvas, {resize:true}) : null;
+
+    let players = []; // {id, name, color, picks: [{id,name,img,removed}], score}
+    let draftOrder = []; // array of player ids in pick sequence
+    let currentPickIndex = 0;
+    let pool = []; // cards available to draft [{id,name,img}]
+    let round = 0;
+    let targetScore = 9;
+    let rollSet = []; // 12 random pokemon rolled
+
+    // UI: create player form rows
+    function createPlayerInputs(n){
+      playersListEl.innerHTML = '';
+      for(let i=0;i<n;i++){
+        const row = document.createElement('div');
+        row.className = 'player-row';
+        const color = document.createElement('input');
+        color.type = 'color'; color.value = colorForIndex(i); color.className='color';
+        color.style.width='36px'; color.style.height='36px'; color.style.padding='0';
+        const name = document.createElement('input'); name.type='text'; name.value=`Player ${i+1}`;
+        const seed = document.createElement('input'); seed.type='number'; seed.min='1'; seed.max='10000'; seed.placeholder='seed?'; seed.style.width='80px';
+        row.appendChild(color);
+        row.appendChild(name);
+        row.appendChild(seed);
+        playersListEl.appendChild(row);
+      }
+    }
+    function colorForIndex(i){
+      const base = ['#ef4444','#f97316','#facc15','#34d399','#60a5fa','#7c3aed','#fb7185','#06b6d4'];
+      return base[i % base.length];
+    }
+
+    initBtn.addEventListener('click',()=>createPlayerInputs(Number(numPlayersInput.value||3)));
+    // init default
+    createPlayerInputs(Number(numPlayersInput.value));
+
+    startBtn.addEventListener('click', startGame);
+
+    resetGameBtn.addEventListener('click', ()=>{
+      if(!confirm('Reset entire game and scores?')) return;
+      location.reload();
+    });
+
+    function readPlayersFromForm(){
+      const rows = Array.from(playersListEl.children);
+      players = rows.map((r,idx)=>({
+        id: cryptoRandomId(6) + '_' + idx,
+        name: r.querySelector('input[type="text"]').value || `Player ${idx+1}`,
+        color: r.querySelector('input[type="color"]').value,
+        picks: [],
+        score: 0
+      }));
+    }
+
+    async function startGame(){
+      readPlayersFromForm();
+      targetScore = Number(document.getElementById('targetScore').value || 9);
+      targetDisp.textContent = targetScore;
+      round = 0;
+      // initial draft order is players in input order
+      draftOrder = players.map(p=>p.id);
+      updateScoreboard();
+      nextRound(true);
+    }
+
+    function updateScoreboard(){
+      scoreboardEl.innerHTML = '';
+      players.forEach(p=>{
+        const c = document.createElement('div');
+        c.className = 'score-card';
+        c.style.borderLeft = `6px solid ${p.color}`;
+        c.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div>
+            <div style="font-weight:800">${p.name}</div>
+            <div class="muted">Score: ${p.score}</div>
+          </div><div style="text-align:right"><div class="big" style="color:${p.color}">${p.score}</div></div></div>`;
+        scoreboardEl.appendChild(c);
+      });
+    }
+
+    function cryptoRandomId(len=8){
+      const arr = new Uint8Array(len);
+      crypto.getRandomValues(arr);
+      return Array.from(arr).map(n=>n.toString(36)).join('').slice(0,len);
+    }
+
+    function shuffleArray(a){
+      for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+      }
+    }
+
+    function playerById(id){ return players.find(p=>p.id===id); }
+
+    // Start a new round
+    async function nextRound(initial=false){
+      round++;
+      roundNumEl.textContent = round;
+      // determine pool size: players * 4
+      const poolSz = players.length * 4;
+      poolSizeEl.textContent = poolSz;
+      // Clear picks
+      players.forEach(p=>p.picks = []);
+      // Generate pool: unique random pokemon ids
+      pool = await fetchUniquePokemon(poolSz);
+      renderPool();
+      // reset roll area
+      rollSet = []; renderRollGrid();
+      rollStatus.textContent = 'No roll yet';
+      // set current draft order
+      if(!initial){
+        // reorder based on score: from last -> first (lowest score picks first)
+        const order = [...players].sort((a,b)=>a.score - b.score || Math.random()-0.5).map(p=>p.id);
+        draftOrder = order;
+      }
+      currentPickIndex = 0;
+      updateTurnUI();
+      renderPicks();
+      updateScoreboard();
+    }
+
+    // Render pool grid
+    function renderPool(){
+      poolGrid.innerHTML = '';
+      pool.forEach(card=>{
+        const el = document.createElement('div');
+        el.className = 'card sparkle';
+        el.style.borderLeft = `4px solid rgba(255,255,255,0.02)`;
+        if(card.taken) el.style.opacity = '0.35';
+        el.innerHTML = `<img src="${card.img}" alt="${card.name}" loading="lazy"/><div class="name">${card.name}</div><div class="meta">#${card.id}</div>`;
+        if(!card.taken){
+          el.addEventListener('click', ()=> pickCard(card.id));
+        }
+        poolGrid.appendChild(el);
+      });
+    }
+
+    // Pick a card for current player
+    function pickCard(pokemonId){
+      const card = pool.find(c=>c.id===pokemonId && !c.taken);
+      if(!card) return;
+      const playerId = draftOrder[currentPickIndex % draftOrder.length];
+      const player = playerById(playerId);
+      if(!player) return;
+      if(player.picks.length >= 4){
+        // shouldn't happen
+        currentPickIndex++;
+        updateTurnUI();
+        return;
+      }
+      // mark taken and add to player's picks
+      card.taken = true;
+      player.picks.push({...card, removed:false});
+      animateSparkle(); playTap();
+      currentPickIndex++;
+      renderPool();
+      renderPicks();
+      updateTurnUI();
+      // if all picks done -> finished drafting
+      const allDone = players.every(p=>p.picks.length === 4);
+      if(allDone){
+        turnOwnerEl.innerHTML = `<div class="turn-bubble">Draft complete</div>`;
+        // nice pulse
+        setTimeout(()=>{ if(confetti) confetti({particleCount: 24,spread: 60,origin:{y:0.4}}); },200);
+      }
+    }
+
+    function updateTurnUI(){
+      // show whose turn based on currentPickIndex
+      const allDone = players.every(p=>p.picks.length === 4);
+      if(allDone){
+        turnOwnerEl.innerHTML = `<div class="turn-bubble">Draft complete</div>`;
+        return;
+      }
+      const playerId = draftOrder[currentPickIndex % draftOrder.length];
+      const player = playerById(playerId);
+      turnOwnerEl.innerHTML = `<div class="turn-bubble" style="background:${player.color}33;border:1px solid ${player.color}">${player.name}'s turn</div>`;
+      // highlight current player's score card
+      Array.from(scoreboardEl.children).forEach(card=>{
+        card.classList.remove('current-player');
+        if(card.innerText.includes(player.name)) card.classList.add('current-player');
+      });
+    }
+
+    function renderPicks(){
+      picksRow.innerHTML = '';
+      const playerId = draftOrder[currentPickIndex % draftOrder.length];
+      const player = playerById(playerId) || players[0];
+      // header
+      const header = document.createElement('div');
+      header.style.display='flex'; header.style.alignItems='center'; header.style.gap='12px'; header.style.marginBottom='6px';
+      header.innerHTML = `<div style="width:46px;height:46px;border-radius:8px;background:${player.color}"></div><div><div style="font-weight:800">${player.name}</div><div class="muted">Picks: ${player.picks.length}/4</div></div>`;
+      picksRow.appendChild(header);
+      // show pick slots for this player
+      player.picks.forEach(pk=>{
+        const slot = document.createElement('div'); slot.className='pick-slot card';
+        slot.style.border=`2px solid ${player.color}22`;
+        slot.innerHTML = `<img src="${pk.img}" style="width:46px;height:46px;object-fit:contain"/><div style="font-size:11px">${pk.name}</div>`;
+        if(pk.removed) slot.classList.add('strike');
+        picksRow.appendChild(slot);
+      });
+      // empty slots
+      for(let i=player.picks.length;i<4;i++){
+        const slot = document.createElement('div'); slot.className='pick-slot';
+        slot.innerHTML = `<div class="muted">empty</div>`;
+        picksRow.appendChild(slot);
+      }
+    }
+
+    // Fetch unique random pokemon set of size n
+    async function fetchUniquePokemon(n){
+      const ids = new Set();
+      while(ids.size < n){
+        const id = Math.floor(Math.random() * MAX_POKEMON_ID) + 1;
+        ids.add(id);
+      }
+      const arr = Array.from(ids);
+      const results = await Promise.all(arr.map(fetchPokemonSafe));
+      // filter out nulls (in case of missing ids) and map to expected shape
+      const cards = results.filter(Boolean).map(p => ({id:p.id,name:p.name,img:p.img}));
+      // if we lost some due to fetch failures, fetch more to reach n
+      if(cards.length < n){
+        const more = await fetchUniquePokemon(n - cards.length);
+        return cards.concat(more);
+      }
+      return cards;
+    }
+
+    // fetch pokemon data safely
+    async function fetchPokemonSafe(id){
+      try{
+        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+        if(!res.ok) return null;
+        const data = await res.json();
+        const img = data.sprites.other['official-artwork'].front_default || data.sprites.front_default;
+        return {id:data.id, name:data.name, img};
+      }catch(e){
+        return null;
+      }
+    }
+
+    // Rolling 12 random pokemon
+    rollBtn.addEventListener('click', async ()=>{
+      rollStatus.textContent = 'Rolling...';
+      rollSet = await fetchUniquePokemon(12);
+      renderRollGrid();
+      rollStatus.textContent = 'Rolled 12!';
+      playRollSound();
+    });
+    rerollBtn.addEventListener('click', async ()=>{
+      rollStatus.textContent = 'Re-rolling...';
+      rollSet = await fetchUniquePokemon(12);
+      renderRollGrid();
+      rollStatus.textContent = 'Re-rolled!';
+      animateSparkle(); playTap();
+    });
+
+    function renderRollGrid(){
+      rollGrid.innerHTML = '';
+      rollSet.forEach(k=>{
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.innerHTML = `<img src="${k.img}" alt="${k.name}"/><div class="name">${k.name}</div><div class="meta">#${k.id}</div>`;
+        rollGrid.appendChild(el);
+      });
+      if(rollSet.length===0) rollGrid.innerHTML = `<div class="muted">No roll yet — click Generate 12 Pokémon</div>`;
+    }
+
+    // Resolve: remove matches from player picks, calculate scoring
+    resolveBtn.addEventListener('click', ()=>{
+      if(rollSet.length === 0){ alert('Generate the 12 Pokémon first.'); return; }
+      // mark removed
+      const rolledIds = new Set(rollSet.map(r=>r.id));
+      players.forEach(p=>{
+        p.picks.forEach(pk=>{
+          if(rolledIds.has(pk.id)) pk.removed = true;
+        });
+      });
+      renderPool();
+      renderPicks();
+      renderRollGrid();
+      // compute removed counts
+      const removedCounts = players.map(p=>({id:p.id,name:p.name,count:p.picks.filter(x=>x.removed).length}));
+      removedCounts.sort((a,b)=>b.count - a.count);
+      // Determine points:
+      // If top has full removal (count == 4) they get 3 points. The player(s) with second most removed get 1 point.
+      let topCount = removedCounts[0].count;
+      const winners = [];
+      if(topCount === 4){
+        // award 3 points to everyone tied at topCount
+        removedCounts.forEach(r=>{
+          if(r.count === topCount){
+            playerById(r.id).score += 3;
+            winners.push(`${r.name} (+3)`);
+          }
+        });
+        // find next highest count < topCount
+        const next = removedCounts.find(r=>r.count < topCount);
+        if(next && next.count > 0){
+          // award 1 point to all with that count
+          const secCount = next.count;
+          removedCounts.forEach(r=>{
+            if(r.count === secCount){
+              playerById(r.id).score += 1;
+              winners.push(`${r.name} (+1)`);
+            }
+          });
+        }
+      } else {
+        // no full removal: award 3 to highest count (if >0) and 1 to second highest (if >0)
+        if(topCount > 0){
+          const tops = removedCounts.filter(r=>r.count === topCount);
+          tops.forEach(t=> playerById(t.id).score += 3);
+          winners.push(...tops.map(t=>`${t.name} (+3)`));
+          const second = removedCounts.find(r=>r.count < topCount && r.count>0);
+          if(second){
+            const secCount = second.count;
+            removedCounts.forEach(r=>{
+              if(r.count === secCount) { playerById(r.id).score += 1; winners.push(`${r.name} (+1)`); }
+            });
+          }
+        }
+      }
+      updateScoreboard();
+      // announce winners
+      const summary = winners.length ? winners.join(', ') : 'No points awarded this round';
+      rollStatus.textContent = 'Resolved — ' + summary;
+      animateResolve();
+      checkForGameWinner();
+    });
+
+    // Next round button
+    nextRoundBtn.addEventListener('click', ()=> {
+      // unless game already finished, start next round
+      if(players.some(p=>p.score >= targetScore)){
+        if(!confirm('A player already reached target score — start new tournament?')) return;
+        // reset scores and rounds
+        players.forEach(p=>p.score=0);
+        round=0;
+        updateScoreboard();
+      }
+      nextRound();
+    });
+
+    function checkForGameWinner(){
+      const winner = players.find(p=>p.score >= targetScore);
+      if(winner){
+        updateScoreboard();
+        setTimeout(()=> {
+          alert(`🎉 ${winner.name} reached ${winner.score} points and wins the tournament!`);
+          if(confetti) confetti({particleCount:200, spread:160, origin:{y:0.3}});
+        }, 120);
+      }
+    }
+
+    // small animations & sounds
+    function animateSparkle(){
+      document.querySelectorAll('.sparkle').forEach(el=>{ el.classList.remove('active'); });
+      const els = document.querySelectorAll('.sparkle');
+      if(els.length>0){
+        const pick = els[Math.floor(Math.random()*els.length)];
+        pick.classList.add('active');
+        setTimeout(()=>pick.classList.remove('active'),700);
+      }
+    }
+    function animateResolve(){
+      // tiny pop on score cards
+      Array.from(scoreboardEl.children).forEach((c,i)=>{
+        c.style.transform='translateY(-6px)';
+        c.style.transition='transform .25s';
+        setTimeout(()=> c.style.transform='translateY(0)', 220 + i*80);
+      });
+    }
+    function playTap(){
+      // tiny click using WebAudio (short beep)
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type='sine'; o.frequency.value = 520;
+        g.gain.value = 0.02;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + 0.06);
+      }catch(e){}
+    }
+    function playRollSound(){
+      try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type='triangle'; o.frequency.value = 220;
+        g.gain.value = 0.02;
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.22);
+        o.stop(ctx.currentTime + 0.25);
+      }catch(e){}
+    }
+
+    // On load: small friendly confetti swirl
+    setTimeout(()=>{ if(confetti) confetti({particleCount:30, spread:90, origin:{y:0.2}}); },500);
+
+    // accessibility: keyboard selecting first available card on Space
+    document.addEventListener('keydown', (e)=>{
+      if(e.key === ' '){
+        e.preventDefault();
+        const avail = pool.find(c=>!c.taken);
+        if(avail) pickCard(avail.id);
+      }
+    });
+  </script>
+</body>
+</html>
